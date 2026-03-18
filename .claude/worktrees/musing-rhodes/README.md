@@ -40,3 +40,59 @@
 - **区块链交互**: `tronweb`, `ethers.js`, `web3.swift`
 - **安全存储**: Keychain (iOS), Encrypted SharedPreferences (Android)
 - **UI 组件**: 自定义设计系统，遵循 Material Design / Cupertino 规范
+
+## 🚀 快速开始
+
+### 前置要求
+- Node.js >= 18.x
+- Flutter SDK >= 3.x (如果是 Flutter 项目) 或 Xcode / Android Studio
+- CocoaPods (for iOS)
+
+### 安装步骤
+
+1. **克隆仓库**
+   ```bash
+   git clone https://github.com/your-username/tronlink-app.git
+   cd tronlink-app
+安装依赖
+bash
+
+编辑
+
+
+
+# 如果使用 Flutter
+flutter pub get
+
+# 如果使用 React Native
+npm install
+# 或
+yarn install
+运行项目
+bash
+
+编辑
+
+
+
+# iOS
+flutter run # 或 npx react-native run-ios
+
+# Android
+🤝 贡献指南
+我们欢迎社区贡献！如果您想改进 TronLink App，请遵循以下步骤：
+Fork 本仓库
+创建您的特性分支 (git checkout -b feature/AmazingFeature)
+提交您的更改 (git commit -m 'Add some AmazingFeature')
+推送到分支 (git push origin feature/AmazingFeature)
+开启一个 Pull Request
+请参阅 CONTRIBUTING.md 了解详细的行为准则和开发流程。
+📄 许可证
+本项目采用 MIT 许可证 - 查看 LICENSE 文件了解详情。
+🔗 相关链接
+官方网站: https://www.tronlink.org
+下载 App: iOS App Store | Google Play
+浏览器扩展: Chrome Web Store
+开发者文档: https://developers.tron.network
+社区支持: Telegram | Twitter
+Made with ❤️ by the TronLink Team and Community.
