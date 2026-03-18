@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>USDD 获取入口 · 线框图 v6</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: 'HarmonyOS Sans', 'PingFang SC', -apple-system, sans-serif;
+  background: #e2e4e8;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 48px;
+  padding: 40px;
+  align-items: flex-start;
+}
+
+/* ══ 画框 ══ */
+.group { display:flex; flex-direction:column; gap:12px; }
+.frame-label { font-size:12px; font-weight:700; color:#333; }
+.frame-sub   { font-size:11px; color:#888; margin-top:-8px; }
+
+/*
+  关键结构：
+  .phone-shell  — 视觉边框+圆角，无 overflow:hidden，position:relative
+    .phone-clip — overflow:hidden + 圆角，包裹所有页面内容
+    .phone-drawer-overlay — position:absolute 覆盖 shell，pointer-events:none when closed
+    .phone-drawer         — position:absolute 底部抽屉
+*/
+.phone-shell {
+  width: 375px;
+  position: relative;
+  border: 2px solid #1a1a1a;
+  border-radius: 14px;
+  overflow: hidden; /* 裁剪抽屉超出边界部分，关闭时隐藏，开启时显示 */
+}
+
+.phone-clip {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f7f8fa;
+  display: flex;
+  flex-direction: column;
+  /* 同步圆角与 shell 对齐 */
+}
+
+/* ══ 页面内遮罩 ══ */
+.phone-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.40);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+  z-index: 10;
+}
+.phone-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ══ 页面内底部抽屉 ══ */
+.phone-drawer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  z-index: 11;
+  padding-bottom: 20px;
+}
+.phone-drawer.open {
+  transform: translateY(0);
+}
+
+.drawer-handle {
+  width: 32px; height: 4px;
+  background: #e4e6eb; border-radius: 2px;
+  margin: 10px auto 0;
+}
+.drawer-title {
+  font-size: 14px; font-weight: 700; color: #1a212b;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid #f0f2f5;
+}
+.drawer-opt {
+  display: flex; align-items: flex-start;
+  padding: 14px 16px; gap: 12px;
+  cursor: pointer; user-select: none;
+  transition: background 0.12s;
+}
+.drawer-opt:hover  { background: #fafbfc; }
+.drawer-opt:active { background: #f0f2f5; }
+.drawer-opt + .drawer-opt { border-top: 1px solid #f5f6f8; }
+.opt-icon-box {
+  width: 42px; height: 42px; background: #e8eaed; border-radius: 10px;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: #4d5466; font-weight: 700;
+}
+.opt-body { flex: 1; }
+.opt-name { font-size: 13px; font-weight: 600; color: #1a212b; margin-bottom: 3px; }
+.opt-desc { font-size: 11px; color: #9ba4b6; line-height: 1.5; }
+.opt-arrow { color: #d0d4dc; font-size: 16px; flex-shrink: 0; padding-top: 2px; }
+.drawer-cancel {
+  display: block; margin: 10px 16px 0;
+  width: calc(100% - 32px); height: 42px;
+  background: #f0f2f5; border: none; border-radius: 10px;
+  font-size: 13px; color: #6d778c; font-family: inherit;
+  cursor: pointer; transition: background 0.12s;
+}
+.drawer-cancel:hover  { background: #e8eaed; }
+.drawer-cancel:active { background: #dde0e6; }
+
+/* ══ 通用 UI ══ */
+.statusbar {
+  height: 44px; background: #1a1a1a;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px; flex-shrink: 0;
+}
+.statusbar span { font-size: 12px; color: #fff; }
+
+.navbar {
+  height: 44px; background: #fff;
+  border-bottom: 1px solid #f0f2f5;
+  display: flex; align-items: center;
+  padding: 0 16px; gap: 8px; flex-shrink: 0;
+}
+.navbar .back  { font-size: 22px; color: #1a212b; }
+.navbar .title { font-size: 15px; font-weight: 600; color: #1a212b; flex: 1; }
+.navbar .badge { border: 1px solid #d0d4dc; border-radius: 100px; padding: 3px 9px; font-size: 11px; color: #6d778c; }
+
+.warning {
+  margin: 10px 16px;
+  background: #f0f2f5; border-left: 3px solid #9ba4b6; border-radius: 6px;
+  padding: 8px 10px; font-size: 11px; color: #6d778c; line-height: 1.5;
+}
+
+/* ══ 存入页 ══ */
+.prod-card {
+  margin: 6px 16px 10px; background: #fff;
+  border: 1px solid #f0f2f5; border-radius: 12px;
+  padding: 12px 14px; display: flex; align-items: center; gap: 10px;
+}
+.prod-icon { width: 40px; height: 40px; background: #e8eaed; border-radius: 8px; flex-shrink: 0; }
+.prod-info .p-name {
+  font-size: 13px; font-weight: 600; color: #1a212b;
+  margin-bottom: 3px; display: flex; align-items: center; gap: 5px;
+}
+.prod-info .p-by { font-size: 11px; color: #9ba4b6; }
+.badge-sm { border: 1px solid #d0d4dc; border-radius: 100px; padding: 1px 6px; font-size: 9px; color: #6d778c; }
+
+.form-card {
+  margin: 0 16px 10px; background: #fff;
+  border: 1px solid #f0f2f5; border-radius: 12px; padding: 12px 14px;
+}
+.f-acct { font-size: 11px; color: #9ba4b6; margin-bottom: 8px; }
+.f-input {
+  background: #f7f8fa; border: 1px solid #eaecf0; border-radius: 8px;
+  padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+.f-input .ph { font-size: 13px; color: #c4c9d4; }
+.f-input .mx { font-size: 12px; font-weight: 600; color: #1a212b; }
+.f-row { display: flex; justify-content: space-between; align-items: center; margin-top: 7px; }
+.f-key { font-size: 12px; color: #9ba4b6; }
+.f-val { font-size: 12px; color: #c4c9d4; }
+
+/* 可用行「如何获取 ›」*/
+.how-link {
+  font-size: 10px; color: #6d778c;
+  text-decoration: underline; text-underline-offset: 2px;
+  cursor: pointer; padding: 2px 4px; border-radius: 4px;
+  transition: background 0.12s; user-select: none;
+}
+.how-link:hover  { background: #f0f2f5; }
+.how-link:active { background: #e4e6eb; color: #1a212b; }
+
+/* ★ 方案一：获取引导条（按钮直接跳转，无抽屉） */
+.acquire-strip {
+  margin: 0 16px 10px; background: #fff;
+  border: 1.5px dashed #c4c9d4; border-radius: 12px; padding: 11px 14px;
+}
+.strip-title { font-size: 12px; font-weight: 600; color: #6d778c; margin-bottom: 9px; }
+.strip-btns  { display: flex; gap: 8px; }
+
+.strip-btn {
+  flex: 1; border-radius: 8px; padding: 9px 8px;
+  font-size: 12px; font-weight: 600; text-align: center;
+  font-family: inherit; line-height: 1.4;
+  cursor: pointer; border: none;
+  text-decoration: none; display: block;
+  transition: opacity 0.15s, transform 0.1s; user-select: none;
+}
+.strip-btn:active { opacity: 0.72; transform: scale(0.97); }
+.strip-btn.primary   { background: #1a212b; color: #fff; }
+.strip-btn.secondary { background: #fff; color: #1a212b; border: 1.5px solid #c4c9d4; }
+.strip-sub { font-size: 10px; font-weight: 400; opacity: 0.65; margin-top: 2px; display: block; }
+
+.yield-block {
+  margin: 0 16px 10px; background: #fff;
+  border: 1px solid #f0f2f5; border-radius: 12px; padding: 10px 14px;
+}
+.y-label { font-size: 11px; color: #9ba4b6; margin-bottom: 3px; }
+.y-val   { font-size: 13px; color: #c4c9d4; }
+
+.cta {
+  margin: 0 16px 12px; background: #d0d4dc; color: #fff; border: none;
+  border-radius: 12px; width: calc(100% - 32px); height: 50px;
+  font-size: 15px; font-weight: 600; font-family: inherit;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+.info-title { padding: 4px 16px 6px; font-size: 12px; font-weight: 700; color: #1a212b; }
+.info-table {
+  margin: 0 16px 12px; background: #fff;
+  border: 1px solid #f0f2f5; border-radius: 12px; overflow: hidden;
+}
+.i-row { display: flex; justify-content: space-between; padding: 10px 14px; font-size: 12px; }
+.i-row + .i-row { border-top: 1px solid #f0f2f5; }
+.i-row .k { color: #9ba4b6; }
+.i-row .v { color: #1a212b; font-weight: 500; }
+
+/* ══ 理财首页 ══ */
+.dark-navbar {
+  height: 44px; background: #1a212b;
+  display: flex; align-items: flex-end;
+  padding: 0 16px 10px; gap: 22px; flex-shrink: 0;
+}
+.dark-navbar .tab { font-size: 14px; color: #6d778c; }
+.dark-navbar .tab.active { color: #fff; font-weight: 600; border-bottom: 2px solid #fff; padding-bottom: 2px; }
+
+.banner-rect {
+  height: 72px; background: #e8eaed;
+  margin: 12px 16px; border-radius: 12px;
+  display: flex; align-items: center; padding: 0 14px; gap: 10px; flex-shrink: 0;
+}
+.banner-icon { width: 42px; height: 42px; background: #c4c9d4; border-radius: 21px; flex-shrink: 0; }
+.banner-lines { display: flex; flex-direction: column; gap: 6px; }
+.bl1 { width: 120px; height: 10px; background: #c4c9d4; border-radius: 3px; }
+.bl2 { width: 78px;  height: 8px;  background: #d8dbe1; border-radius: 3px; }
+
+.section-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 16px 8px;
+}
+.section-row .t { font-size: 13px; font-weight: 600; color: #1a212b; }
+.section-row .s { font-size: 11px; color: #9ba4b6; }
+
+.token-list { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+
+.token-card {
+  background: #fff; border-radius: 12px;
+  padding: 12px 14px; display: flex; align-items: center; gap: 10px;
+  cursor: pointer; transition: background 0.12s;
+}
+.token-card:active { background: #f7f8fa; }
+
+.t-icon {
+  width: 38px; height: 38px; background: #e8eaed; border-radius: 19px;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 9px; color: #6d778c; font-weight: 700; text-align: center; line-height: 1.3;
+}
+.t-info  { flex: 1; min-width: 0; }
+.t-name  { font-size: 14px; font-weight: 600; color: #1a212b; display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+.t-sub   { font-size: 11px; color: #9ba4b6; }
+.badge-hot { background: #4d5466; color: #fff; font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 100px; }
+
+.apy-block { text-align: right; }
+.apy-main  { font-size: 14px; font-weight: 600; color: #1a212b; }
+.apy-unit  { font-size: 10px; color: #9ba4b6; }
+.apy-get {
+  font-size: 10px; color: #6d778c;
+  text-decoration: underline; text-underline-offset: 2px;
+  cursor: pointer; display: inline-block; margin-top: 3px;
+  padding: 1px 3px; border-radius: 3px;
+  transition: background 0.12s; user-select: none;
+}
+.apy-get:hover  { background: #f0f2f5; }
+.apy-get:active { background: #e4e6eb; color: #1a212b; }
+.t-chevron { color: #d0d4dc; font-size: 16px; }
+
+.tabbar {
+  height: 56px; background: rgba(255,255,255,0.92);
+  border-top: 0.5px solid #eaecf0;
+  display: flex; margin-top: auto; flex-shrink: 0;
+}
+.tabbar .t { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+.tabbar .t .td { width: 22px; height: 22px; background: #d8dbe1; border-radius: 5px; }
+.tabbar .t .tn { font-size: 10px; color: #9ba4b6; }
+.tabbar .t.active .td { background: #1a212b; }
+.tabbar .t.active .tn { color: #1a212b; font-weight: 600; }
+
+.spacer { height: 16px; flex-shrink: 0; }
+
+/* ══ 注释标注 ══ */
+.callout {
+  border: 1.5px dashed #c4c9d4; border-radius: 8px;
+  padding: 9px 13px; font-size: 11px; color: #4d5466;
+  background: #fafbfc; line-height: 1.7; max-width: 375px;
+}
+.callout strong { color: #1a212b; }
+.ctag {
+  display: inline-block; background: #eaecf0; border-radius: 4px;
+  padding: 0 5px; font-size: 10px; color: #4d5466; font-weight: 600; margin: 0 2px;
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     屏幕一：存入 USDD 页
+     ════════════════════════════════════════ -->
+<div class="group">
+  <div class="frame-label">存入 USDD 页 — 方案一引导条 + 可用行入口</div>
+  <div class="frame-sub">引导条按钮直接跳转；「如何获取 ›」弹出路径抽屉</div>
+
+  <div class="phone-shell" id="shell-deposit">
+
+    <!-- 页面内容 -->
+    <div class="phone-clip">
+      <div class="statusbar"><span>11:42</span><span>● ▲ ▊</span></div>
+
+      <div class="navbar">
+        <span class="back">‹</span>
+        <span class="title">存入 USDD</span>
+        <span class="badge">JustLend DAO</span>
+      </div>
+
+      <div class="warning">TronLink 接入第三方 DeFi 协议，仅提供项目信息展示及基础操作服务，不构成任何形式的投资建议。</div>
+
+      <div class="prod-card">
+        <div class="prod-icon"></div>
+        <div class="prod-info">
+          <div class="p-name">存款生息 <span class="badge-sm">灵活存取</span> <span class="badge-sm">币本位</span></div>
+          <div class="p-by">由 JustLend DAO 提供 ›</div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <div class="f-acct">参与账户 &emsp; 导入-4 &nbsp; TPMzoX...NzQNGC</div>
+        <div class="f-input">
+          <span class="ph">请输入数量</span>
+          <span class="mx">最大</span>
+        </div>
+        <div class="f-row">
+          <span class="f-key">可用</span>
+          <span style="display:flex;align-items:center;gap:7px;">
+            <span class="f-val">0 USDD</span>
+            <span class="how-link" data-shell="deposit">如何获取 ›</span>
+          </span>
+        </div>
+        <div class="f-row">
+          <span class="f-key">已参与</span>
+          <span class="f-val">0 USDD</span>
+        </div>
+      </div>
+
+      <!-- 方案一：引导条（按钮直接跳转） -->
+      <div class="acquire-strip">
+        <div class="strip-title">获取 USDD</div>
+        <div class="strip-btns">
+          <a class="strip-btn primary" href="https://app.usdd.io/tron/psm" target="_blank">
+            USDT 兑换
+            <span class="strip-sub">PSM · 使用 USDT 兑换</span>
+          </a>
+          <a class="strip-btn secondary" href="https://app.usdd.io/tron" target="_blank">
+            超额抵押铸造
+            <span class="strip-sub">Vault · 存入通证铸造</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="yield-block">
+        <div class="y-label">预计日收益 ⓘ</div>
+        <div class="y-val">— USDD</div>
+      </div>
+
+      <button class="cta">（1/2）参与前，请先授权</button>
+
+      <div class="info-title">产品介绍</div>
+      <div class="info-table">
+        <div class="i-row"><span class="k">APY</span><span class="v">5.00% ↗</span></div>
+        <div class="i-row"><span class="k">收益代币</span><span class="v">USDD</span></div>
+        <div class="i-row"><span class="k">总锁仓量</span><span class="v">$295,129,297</span></div>
+      </div>
+      <div class="spacer"></div>
+    </div><!-- /phone-clip -->
+
+    <!-- 遮罩（覆盖 shell） -->
+    <div class="phone-overlay" id="ov-deposit"></div>
+
+    <!-- 底部抽屉（在 shell 内，position:absolute） -->
+    <div class="phone-drawer" id="dr-deposit">
+      <div class="drawer-handle"></div>
+      <div class="drawer-title">获取 USDD</div>
+      <div class="drawer-opt" data-url="https://app.usdd.io/tron/psm" data-shell="deposit">
+        <div class="opt-icon-box">PSM</div>
+        <div class="opt-body">
+          <div class="opt-name">USDT 兑换（PSM）</div>
+          <div class="opt-desc">通过稳定汇率模块，使用 USDT 即时兑换 USDD，操作简便。</div>
+        </div>
+        <span class="opt-arrow">›</span>
+      </div>
+      <div class="drawer-opt" data-url="https://app.usdd.io/tron" data-shell="deposit">
+        <div class="opt-icon-box">Vault</div>
+        <div class="opt-body">
+          <div class="opt-name">超额抵押铸造（Vault）</div>
+          <div class="opt-desc">将通证存入 Vault 合约，超额抵押后铸造 USDD。</div>
+        </div>
+        <span class="opt-arrow">›</span>
+      </div>
+      <button class="drawer-cancel" data-shell="deposit">取消</button>
+    </div>
+
+  </div><!-- /phone-shell -->
+
+  <div class="callout">
+    <strong>改动说明</strong><br>
+    <span class="ctag">入口①</span> 「可用 0 USDD」右侧「如何获取 ›」→ 弹出路径抽屉<br>
+    <span class="ctag">入口②</span> form 下方固定引导条，按钮点击直接跳转对应外链<br>
+    <span class="ctag">抽屉</span> 选择路径后跳转 PSM / Vault；主流程不受影响
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     屏幕二：理财首页
+     ════════════════════════════════════════ -->
+<div class="group">
+  <div class="frame-label">理财首页 · 方案 A — APY 下方加小字入口</div>
+  <div class="frame-sub">每个通证独立卡片；「如何获取 ›」弹出路径抽屉</div>
+
+  <div class="phone-shell" id="shell-home">
+
+    <div class="phone-clip">
+      <div class="statusbar"><span>11:39</span><span>● ▲ ▊</span></div>
+
+      <div class="dark-navbar">
+        <span class="tab active">理财</span>
+        <span class="tab">闪兑</span>
+      </div>
+
+      <div class="banner-rect">
+        <div class="banner-icon"></div>
+        <div class="banner-lines">
+          <div class="bl1"></div>
+          <div class="bl2"></div>
+        </div>
+      </div>
+
+      <div class="section-row">
+        <span class="t">理财推荐</span>
+        <span class="s">默认排序 ↕</span>
+      </div>
+
+      <div class="token-list">
+
+        <div class="token-card">
+          <div class="t-icon">T</div>
+          <div class="t-info">
+            <div class="t-name">USDT <span class="badge-hot">Hot</span></div>
+            <div class="t-sub">可用 10.00 USDT</div>
+          </div>
+          <div><span class="apy-main">3.67%</span><span class="apy-unit"> APY</span></div>
+          <span class="t-chevron">›</span>
+        </div>
+
+        <div class="token-card">
+          <div class="t-icon">TRX</div>
+          <div class="t-info">
+            <div class="t-name">TRX</div>
+            <div class="t-sub">可用 5.618 TRX</div>
+          </div>
+          <div><span class="apy-main">3.88%</span><span class="apy-unit"> APY</span></div>
+          <span class="t-chevron">›</span>
+        </div>
+
+        <!-- ★ USDD：APY 下方「如何获取 ›」 -->
+        <div class="token-card">
+          <div class="t-icon">USD<br>D</div>
+          <div class="t-info">
+            <div class="t-name">USDD <span class="badge-hot">Hot</span></div>
+            <div class="t-sub">可用 0 USDD</div>
+          </div>
+          <div class="apy-block">
+            <div><span class="apy-main">5.00%</span><span class="apy-unit"> APY</span></div>
+            <div class="apy-get how-link" data-shell="home">如何获取 ›</div>
+          </div>
+          <span class="t-chevron">›</span>
+        </div>
+
+        <div class="token-card">
+          <div class="t-icon">wst</div>
+          <div class="t-info">
+            <div class="t-name">wstUSDT</div>
+            <div class="t-sub">可用 0 wstUSDT</div>
+          </div>
+          <div><span class="apy-main">1.77%</span><span class="apy-unit"> APY</span></div>
+          <span class="t-chevron">›</span>
+        </div>
+
+        <div class="token-card">
+          <div class="t-icon">sTRX</div>
+          <div class="t-info">
+            <div class="t-name">sTRX</div>
+            <div class="t-sub">可用 0 sTRX</div>
+          </div>
+          <div><span class="apy-main">0.00%</span><span class="apy-unit"> APY</span></div>
+          <span class="t-chevron">›</span>
+        </div>
+
+        <div class="token-card">
+          <div class="t-icon">SUN</div>
+          <div class="t-info">
+            <div class="t-name">SUN</div>
+            <div class="t-sub">可用 0 SUN</div>
+          </div>
+          <div><span class="apy-main">0.77%</span><span class="apy-unit"> APY</span></div>
+          <span class="t-chevron">›</span>
+        </div>
+
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="tabbar">
+        <div class="t"><div class="td"></div><div class="tn">资产</div></div>
+        <div class="t active"><div class="td"></div><div class="tn">市场</div></div>
+        <div class="t"><div class="td"></div><div class="tn">发现</div></div>
+        <div class="t"><div class="td"></div><div class="tn">我的</div></div>
+      </div>
+    </div><!-- /phone-clip -->
+
+    <!-- 遮罩 -->
+    <div class="phone-overlay" id="ov-home"></div>
+
+    <!-- 底部抽屉 -->
+    <div class="phone-drawer" id="dr-home">
+      <div class="drawer-handle"></div>
+      <div class="drawer-title">获取 USDD</div>
+      <div class="drawer-opt" data-url="https://app.usdd.io/tron/psm" data-shell="home">
+        <div class="opt-icon-box">PSM</div>
+        <div class="opt-body">
+          <div class="opt-name">USDT 兑换（PSM）</div>
+          <div class="opt-desc">通过稳定汇率模块，使用 USDT 即时兑换 USDD，操作简便。</div>
+        </div>
+        <span class="opt-arrow">›</span>
+      </div>
+      <div class="drawer-opt" data-url="https://app.usdd.io/tron" data-shell="home">
+        <div class="opt-icon-box">Vault</div>
+        <div class="opt-body">
+          <div class="opt-name">超额抵押铸造（Vault）</div>
+          <div class="opt-desc">将通证存入 Vault 合约，超额抵押后铸造 USDD，同时保留原有资产敞口。</div>
+        </div>
+        <span class="opt-arrow">›</span>
+      </div>
+      <button class="drawer-cancel" data-shell="home">取消</button>
+    </div>
+
+  </div><!-- /phone-shell -->
+
+  <div class="callout">
+    <strong>改动说明</strong><br>
+    <span class="ctag">入口</span> USDD 行 APY 下方「如何获取 ›」→ 弹出路径抽屉<br>
+    <span class="ctag">布局</span> 每个通证独立卡片，间距 8px<br>
+    <span class="ctag">抽屉</span> 路径确认后跳转 PSM / Vault 外链
+  </div>
+</div>
+
+
+<script>
+(function () {
+  function openDrawer(id) {
+    document.getElementById('ov-' + id).classList.add('open');
+    document.getElementById('dr-' + id).classList.add('open');
+  }
+  function closeDrawer(id) {
+    document.getElementById('ov-' + id).classList.remove('open');
+    document.getElementById('dr-' + id).classList.remove('open');
+  }
+
+  /* 「如何获取 ›」触发抽屉 */
+  document.querySelectorAll('.how-link[data-shell]').forEach(function (el) {
+    el.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openDrawer(el.getAttribute('data-shell'));
+    });
+  });
+
+  /* 抽屉内选项 → 跳转 */
+  document.querySelectorAll('.drawer-opt[data-url]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var shell = el.getAttribute('data-shell');
+      var url   = el.getAttribute('data-url');
+      closeDrawer(shell);
+      window.open(url, '_blank');
+    });
+  });
+
+  /* 取消按钮 */
+  document.querySelectorAll('.drawer-cancel[data-shell]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      closeDrawer(el.getAttribute('data-shell'));
+    });
+  });
+
+  /* 点遮罩关闭 */
+  document.querySelectorAll('.phone-overlay').forEach(function (el) {
+    el.addEventListener('click', function () {
+      /* 从 id="ov-xxx" 提取 xxx */
+      var id = el.id.replace('ov-', '');
+      closeDrawer(id);
+    });
+  });
+})();
+</script>
+</body>
+</html>
