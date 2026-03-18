@@ -79,7 +79,6 @@ bash
 flutter run # 或 npx react-native run-ios
 
 # Android
-flutter run # 或 npx react-native run-android
 🤝 贡献指南
 我们欢迎社区贡献！如果您想改进 TronLink App，请遵循以下步骤：
 Fork 本仓库
