@@ -5,7 +5,9 @@
 **涉及页面**：理财首页（市场 Tab）、存入 USDD 页
 
 **原型图预览**：  
-[点击此处查看产品原型图](https://boisterous-tiramisu-f41c34.netlify.app/)
+**原型/交互图查看：**  
+- [GitHub 项目文档仓库](https://github.com/rageencui/tronlink-app-PRD)
+- [最新原型图预览（GitHub Page）](https://rageencui.github.io/tronlink-app-PRD/TronLink%20%E7%90%86%E8%B4%A2/tronlink-usdd-wireframe-v6.html)
 
 > 说明：原型图为交互设计初稿，仅供产品&开发参考，具体样式、细节以 UI 最终输出为准。
 
